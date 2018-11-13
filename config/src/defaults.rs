@@ -42,6 +42,11 @@ pub trait Defaults {
         Duration::from_secs(30)
     }
 
+    /// Default period for discovering peers
+    fn connections_discovery_peers_period(&self) -> Duration {
+        Duration::from_secs(30)
+    }
+
     /// Default
     fn protocol_epoch_zero_timestamp(&self) -> i64;
 
