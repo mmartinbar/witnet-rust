@@ -41,6 +41,14 @@ pub trait Defaults {
     fn connections_storage_peers_period(&self) -> Duration {
         Duration::from_secs(30)
     }
+
+    /// Default
+    fn protocol_epoch_zero_timestamp(&self) -> i64;
+
+    /// Default
+    fn protocol_checkpoint_period(&self) -> u64 {
+        90
+    }
 }
 
 /// Struct that will implement all the mainnet defaults
@@ -57,6 +65,11 @@ impl Defaults for Mainnet {
     fn storage_db_path(&self) -> PathBuf {
         PathBuf::from(".witnet-rust-mainnet")
     }
+    fn protocol_epoch_zero_timestamp(&self) -> i64 {
+        // TODO: default value?
+        // A point far in the future
+        19_999_999_999_999
+    }
 }
 
 impl Defaults for Testnet1 {
@@ -66,5 +79,10 @@ impl Defaults for Testnet1 {
 
     fn storage_db_path(&self) -> PathBuf {
         PathBuf::from(".witnet-rust-testnet-1")
+    }
+
+    fn protocol_epoch_zero_timestamp(&self) -> i64 {
+        // TODO: default value?
+        9_999_999_999_999
     }
 }

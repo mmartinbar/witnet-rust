@@ -31,6 +31,10 @@ pub struct Config {
     /// Storage-related configuration
     #[serde(default)]
     pub storage: Storage,
+
+    /// Protocol-related configuration (should
+    #[serde(default)]
+    pub protocol: Protocol,
 }
 
 /// Connections-specific partial configuration.
@@ -74,6 +78,17 @@ pub struct Storage {
     #[serde(default)]
     /// Path to the directory that will contain the database files
     pub db_path: Option<PathBuf>,
+}
+
+/// Protocol-specific configuration
+#[derive(Deserialize, Default, Debug, Clone, PartialEq)]
+pub struct Protocol {
+    /// :D
+    #[serde(default)]
+    pub epoch_zero_timestamp: Option<i64>,
+    /// ;D
+    #[serde(default)]
+    pub checkpoint_period: Option<u64>,
 }
 
 impl Default for Environment {

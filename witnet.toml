@@ -4,6 +4,9 @@ server_addr = "0.0.0.0:21337"
 [storage]
 db_path = ".wit"
 
+[protocol]
+epoch_zero_timestamp = 1542120791
+
 #########################################
 ### LOGGING CONFIGURATION             ###
 #########################################

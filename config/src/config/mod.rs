@@ -62,6 +62,9 @@ pub struct Config {
 
     /// Storage-related configuration
     pub storage: Storage,
+
+    /// Protocol-related configuration
+    pub protocol: Protocol,
 }
 
 /// Connections-specific configuration.
@@ -90,6 +93,15 @@ pub struct Connections {
 
     /// Period of the persist peers task
     pub storage_peers_period: Duration,
+}
+
+/// Protocol-specific configuration
+#[derive(Debug, Clone, PartialEq)]
+pub struct Protocol {
+    /// :D TODO: docs partial
+    pub epoch_zero_timestamp: i64,
+    /// ;D
+    pub checkpoint_period: u64,
 }
 
 /// Storage-specific configuration
@@ -123,6 +135,7 @@ impl Config {
             environment: config.environment.clone(),
             connections: Connections::from_partial(&config.connections, &*defaults),
             storage: Storage::from_partial(&config.storage, &*defaults),
+            protocol: Protocol::from_partial(&config.protocol, &*defaults),
         }
     }
 }
@@ -172,6 +185,21 @@ impl Storage {
                 .db_path
                 .to_owned()
                 .unwrap_or_else(|| defaults.storage_db_path()),
+        }
+    }
+}
+
+impl Protocol {
+    pub fn from_partial(config: &partial::Protocol, defaults: &Defaults) -> Self {
+        Protocol {
+            epoch_zero_timestamp: config
+                .epoch_zero_timestamp
+                .to_owned()
+                .unwrap_or_else(|| defaults.protocol_epoch_zero_timestamp()),
+            checkpoint_period: config
+                .checkpoint_period
+                .to_owned()
+                .unwrap_or_else(|| defaults.protocol_checkpoint_period()),
         }
     }
 }
