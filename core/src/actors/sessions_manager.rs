@@ -41,11 +41,11 @@ impl SessionsManager {
 
             // Check if bootstrap is needed
             if act.sessions.is_outbound_bootstrap_needed() {
-                // TODO: remove this
-                use crate::actors::epoch_manager::{EpochManager, GetEpoch};
-                let epoch_manager_addr = System::current().registry().get::<EpochManager>();
-                epoch_manager_addr.do_send(GetEpoch);
-                // TODO: until here
+                //// TODO: remove this
+                //use crate::actors::epoch_manager::{EpochManager, GetEpoch};
+                //let epoch_manager_addr = System::current().registry().get::<EpochManager>();
+                //epoch_manager_addr.do_send(GetEpoch);
+                //// TODO: until here
                 // Get peers manager address
                 let peers_manager_addr = System::current().registry().get::<PeersManager>();
 

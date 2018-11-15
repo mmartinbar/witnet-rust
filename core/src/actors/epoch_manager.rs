@@ -1,6 +1,8 @@
 use log::{debug, warn};
 
-use actix::{Actor, Context, Handler, Message, SystemService};
+use actix::{Actor, Addr, AsyncContext, Context, Handler, Message, SystemService};
+
+//use std::collections::HashMap;
 
 use crate::actors::config_manager::send_get_config_request;
 
@@ -41,14 +43,35 @@ impl Message for GetEpoch {
     type Result = EpochResult<Epoch>;
 }
 
+/// Subscribe to a single epoch
+#[derive(Message)]
+pub struct Subscribe<T>
+    where
+        T: actix::Actor,
+        T::Context: actix::AsyncContext<T>,
+        T: crate::actors::epoch_manager::EpochNotifiable<T> {
+    /// Actor address
+    pub address: Addr<T>,
+
+    /// Message to be sent back
+    pub message: EpochNotification<T>,
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // ACTOR BASIC STRUCTURE
 ////////////////////////////////////////////////////////////////////////////////////////
 /// Epoch manager actor
 #[derive(Debug, Default)]
 pub struct EpochManager {
+    /// Epoch zero timestamp
     epoch_zero_timestamp: Option<i64>,
+
+    /// Checkpoint period (in seconds)
     checkpoint_period_seconds: Option<u64>,
+
+    //messages: HashMap<u32, EpochNotification<T>>,
+    //messages: HashMap<u32, u32>,
+    //message: EpochNotification<T>
 }
 
 /// Make actor from `ConnectionsManager`
@@ -133,7 +156,6 @@ impl EpochManager {
 ////////////////////////////////////////////////////////////////////////////////////////
 // ACTOR MESSAGE HANDLERS
 ////////////////////////////////////////////////////////////////////////////////////////
-/// Handler for InboundTcpConnect messages (built from inbound connections)
 impl Handler<GetEpoch> for EpochManager {
     /// Response for message, which is defined by `ResponseType` trait
     type Result = EpochResult<Epoch>;
@@ -145,3 +167,47 @@ impl Handler<GetEpoch> for EpochManager {
         r
     }
 }
+
+impl<T> Handler<Subscribe<T>> for EpochManager
+    where
+    T: actix::Actor,
+    T::Context: actix::AsyncContext<T>,
+    T: crate::actors::epoch_manager::EpochNotifiable<T>
+{
+    /// Result type
+    type Result = ();
+
+    /// Method to handle the Subscribe message
+    fn handle(&mut self, _msg: Subscribe<T>, _ctx: &mut Self::Context) {
+        debug!("SUBSCRIPTION RECEIVED!");
+
+        // Send message back to the actor
+        //msg.address.do_send(msg.message);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// OTHER ACTOR MESSAGES
+////////////////////////////////////////////////////////////////////////////////////////
+/// Actor message to indicate that when an epoch starts, a callback function should be called
+#[derive(Message)]
+pub struct EpochNotification<T>
+    where
+        T: actix::Actor,
+        T::Context: actix::AsyncContext<T>,
+        T: crate::actors::epoch_manager::EpochNotifiable<T>
+{
+    /// Epoch that has just started
+    pub starting_epoch: u32,
+
+    /// Payload for the epoch notification
+    pub callback: Box<dyn Fn(&mut T, &mut T::Context, u32)>,
+}
+
+/// Epoch notifiable trait
+pub trait EpochNotifiable<T>: Handler<EpochNotification<T>>
+    where
+        T: Actor,
+        T::Context: AsyncContext<T>,
+        T: EpochNotifiable<T>
+{}

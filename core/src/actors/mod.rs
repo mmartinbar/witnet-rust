@@ -27,3 +27,6 @@ pub mod storage_keys;
 
 /// Epoch manager actor module
 pub mod epoch_manager;
+
+/// Block manager actor module
+pub mod block_manager;
