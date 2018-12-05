@@ -1,5 +1,5 @@
 use actix::Message;
-use witnet_data_structures::chain::InvVector;
+use witnet_data_structures::chain::InventoryItem;
 
 /// Message result of unit
 pub type SessionUnitResult = ();
@@ -15,5 +15,5 @@ impl Message for GetPeers {
 #[derive(Clone, Message)]
 pub struct AnnounceItems {
     /// Inventory items
-    pub items: Vec<InvVector>,
+    pub items: Vec<InventoryItem>,
 }

@@ -25,9 +25,12 @@ use super::{
 };
 use witnet_data_structures::{
     builders::from_address,
-    chain::{Block, CheckpointBeacon, Hash, InvVector},
+    chain::{Block, CheckpointBeacon, Hash, InventoryItem},
     serializers::TryFrom,
-    types::{Address, Command, GetBlocks, GetData, Inv, Message as WitnetMessage, Peers, Version},
+    types::{
+        Address, Command, InventoryAnnouncement, InventoryRequest, LastBeacon,
+        Message as WitnetMessage, Peers, Version,
+    },
 };
 use witnet_p2p::sessions::{SessionStatus, SessionType};
 
@@ -85,16 +88,20 @@ impl StreamHandler<BytesMut, Error> for Session {
                     //////////////
                     // GET DATA //
                     //////////////
-                    (_, SessionStatus::Consolidated, Command::GetData(GetData { inventory })) => {
+                    (
+                        _,
+                        SessionStatus::Consolidated,
+                        Command::InventoryRequest(InventoryRequest { inventory }),
+                    ) => {
                         for elem in inventory {
                             match elem {
-                                InvVector::Block(hash)
-                                | InvVector::Tx(hash)
-                                | InvVector::DataRequest(hash)
-                                | InvVector::DataResult(hash) => {
+                                InventoryItem::Block(hash)
+                                | InventoryItem::Tx(hash)
+                                | InventoryItem::DataRequest(hash)
+                                | InventoryItem::DataResult(hash) => {
                                     send_block_msg(self, ctx, &hash);
                                 }
-                                InvVector::Error(_) => warn!("Error InvElem received"),
+                                InventoryItem::Error(_) => warn!("Error InvElem received"),
                             }
                         }
                     }
@@ -112,7 +119,7 @@ impl StreamHandler<BytesMut, Error> for Session {
                     (
                         SessionType::Inbound,
                         SessionStatus::Consolidated,
-                        Command::GetBlocks(GetBlocks {
+                        Command::LastBeacon(LastBeacon {
                             highest_block_checkpoint,
                         }),
                     ) => {
@@ -121,7 +128,7 @@ impl StreamHandler<BytesMut, Error> for Session {
                     (
                         SessionType::Outbound,
                         SessionStatus::Consolidated,
-                        Command::GetBlocks(GetBlocks {
+                        Command::LastBeacon(LastBeacon {
                             highest_block_checkpoint,
                         }),
                     ) => {
@@ -131,8 +138,8 @@ impl StreamHandler<BytesMut, Error> for Session {
                     ////////////////////
                     // INVENTORY      //
                     ////////////////////
-                    // Handle Inv message
-                    (_, SessionStatus::Consolidated, Command::Inv(inv)) => {
+                    // Handle InventoryAnnouncement message
+                    (_, SessionStatus::Consolidated, Command::InventoryAnnouncement(inv)) => {
                         inventory_process_inv(self, ctx, &inv);
                     }
                     /////////////////////
@@ -174,7 +181,7 @@ impl Handler<AnnounceItems> for Session {
             self.remote_addr
         );
         // Create AnnounceItems message
-        let announce_items_msg = WitnetMessage::build_inv(msg.items);
+        let announce_items_msg = WitnetMessage::build_inventory_announcement(msg.items);
         // Write message in session
         self.send_message(announce_items_msg);
     }
@@ -194,7 +201,7 @@ fn try_consolidate_session(session: &mut Session, ctx: &mut Context<Session>) {
     }
 }
 
-/// Function to retrieve highest CheckpointBeacon and send GetBlocks message in Session
+/// Function to retrieve highest CheckpointBeacon and send LastBeacon message in Session
 fn inventory_get_blocks(session: &Session, ctx: &mut Context<Session>) {
     // Get BlocksManager address from registry
     let blocks_manager_addr = System::current().registry().get::<BlocksManager>();
@@ -206,7 +213,7 @@ fn inventory_get_blocks(session: &Session, ctx: &mut Context<Session>) {
             match res {
                 Ok(Ok(beacon)) => {
                     // Create get blocks message
-                    let get_blocks_msg = WitnetMessage::build_get_blocks(beacon);
+                    let get_blocks_msg = WitnetMessage::build_last_beacon(beacon);
                     // Write get blocks message in session
                     act.send_message(get_blocks_msg);
 
@@ -326,8 +333,12 @@ fn inventory_process_block(_session: &mut Session, _ctx: &mut Context<Session>, 
     blocks_manager_addr.do_send(AddNewBlock { block });
 }
 
-/// Function to process an Inv message
-fn inventory_process_inv(session: &mut Session, _ctx: &mut Context<Session>, inv: &Inv) {
+/// Function to process an InventoryAnnouncement message
+fn inventory_process_inv(
+    session: &mut Session,
+    _ctx: &mut Context<Session>,
+    inv: &InventoryAnnouncement,
+) {
     // Check how many of the received inventory vectors need to be requested
     let inv_vectors = &inv.inventory;
 
@@ -336,10 +347,10 @@ fn inventory_process_inv(session: &mut Session, _ctx: &mut Context<Session>, inv
 
     // Check if there are any vectors to be requested
     if !missing_inv_vectors.is_empty() {
-        // Create GetData message with requested inventory vectors
-        let get_data_msg = WitnetMessage::build_get_data(missing_inv_vectors.to_vec());
+        // Create InventoryRequest message with requested inventory vectors
+        let get_data_msg = WitnetMessage::build_inventory_request(missing_inv_vectors.to_vec());
 
-        // Write GetData message in session
+        // Write InventoryRequest message in session
         session.send_message(get_data_msg);
     }
 }
@@ -384,7 +395,7 @@ fn handshake_version(session: &mut Session, sender_address: &Address) -> Vec<Wit
 
     responses
 }
-/// Function called when GetData message is received
+/// Function called when InventoryRequest message is received
 fn send_block_msg(session: &mut Session, ctx: &mut Context<Session>, hash: &Hash) {
     let Hash::SHA256(block_key) = *hash;
 
@@ -460,13 +471,13 @@ fn todo_inbound_session_getblocks(
                             .into_actor(act)
                             .then(|res, act, _ctx| match res {
                                 Ok(Ok(blocks)) => {
-                                    let msg = WitnetMessage::build_inv(blocks);
+                                    let msg = WitnetMessage::build_inventory_announcement(blocks);
                                     act.send_message(msg);
 
                                     actix::fut::ok(())
                                 }
                                 _ => {
-                                    error!("GetBlocks::EpochRange didn't succeeded");
+                                    error!("LastBeacon::EpochRange didn't succeeded");
 
                                     actix::fut::err(())
                                 }
@@ -476,7 +487,8 @@ fn todo_inbound_session_getblocks(
                         debug!("Received checkpoint beacon is ahead of ours.");
                     }
                     // Create get blocks message
-                    // let get_blocks_msg = WitnetMessage::build_get_blocks(beacon);
+                    // let get_blocks_msg = WitnetMessage::build_last_beacon(beacon);
+
                     // Write get blocks message in session
                     // act.send_message(get_blocks_msg);
 

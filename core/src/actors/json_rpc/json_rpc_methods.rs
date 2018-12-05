@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn inventory_method() {
         // The expected behaviour of the inventory method
-        use witnet_data_structures::chain::*;
+        use witnet_data_structures::chain::;
 
         let block = Block {
             header: BlockHeaderWithProof {

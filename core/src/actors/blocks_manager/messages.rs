@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 
 use crate::actors::blocks_manager::BlocksManagerError;
 use witnet_data_structures::{
-    chain::{Block, CheckpointBeacon, Epoch, Hash, InvVector},
+    chain::{Block, CheckpointBeacon, Epoch, Hash, InventoryItem},
     error::ChainInfoResult,
 };
 
@@ -42,5 +42,5 @@ pub struct GetBlocksEpochRange {
 }
 
 impl Message for GetBlocksEpochRange {
-    type Result = Result<Vec<InvVector>, BlocksManagerError>;
+    type Result = Result<Vec<InventoryItem>, BlocksManagerError>;
 }

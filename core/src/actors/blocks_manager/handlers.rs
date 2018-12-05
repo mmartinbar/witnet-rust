@@ -4,7 +4,7 @@ use crate::actors::blocks_manager::{BlocksManager, BlocksManagerError};
 use crate::actors::epoch_manager::messages::EpochNotification;
 
 use witnet_data_structures::{
-    chain::{Block, CheckpointBeacon, Hash, InvVector},
+    chain::{Block, CheckpointBeacon, Hash, InventoryItem},
     error::{ChainInfoError, ChainInfoErrorKind, ChainInfoResult},
 };
 
@@ -83,7 +83,7 @@ impl Handler<AddNewBlock> for BlocksManager {
                 let sessions_manager_addr = System::current().registry().get::<SessionsManager>();
 
                 // Tell SessionsManager to announce the new block through every consolidated Session
-                let items = vec![InvVector::Block(hash)];
+                let items = vec![InventoryItem::Block(hash)];
                 sessions_manager_addr.do_send(Broadcast {
                     command: AnnounceItems { items },
                 });
@@ -119,7 +119,7 @@ impl Handler<GetBlock> for BlocksManager {
 
 /// Handler for GetBlocksEpochRange
 impl Handler<GetBlocksEpochRange> for BlocksManager {
-    type Result = Result<Vec<InvVector>, BlocksManagerError>;
+    type Result = Result<Vec<InventoryItem>, BlocksManagerError>;
 
     fn handle(
         &mut self,
@@ -130,7 +130,7 @@ impl Handler<GetBlocksEpochRange> for BlocksManager {
         let hashes = range
             .map(|epoch| &self.epoch_to_block_hash[&epoch])
             .flatten()
-            .map(|hash| InvVector::Block(*hash))
+            .map(|hash| InventoryItem::Block(*hash))
             .collect();
 
         Ok(hashes)

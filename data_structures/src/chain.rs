@@ -140,12 +140,14 @@ pub enum Hash {
 /// SHA-256 Hash
 pub type SHA256 = [u8; 32];
 
+/// Transaction data structure
 // FIXME(#99): define Transaction as defined in issue
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Transaction;
 
+/// Inventory item data structure
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub enum InvVector {
+pub enum InventoryItem {
     Error(Hash),
     Tx(Hash),
     Block(Hash),
